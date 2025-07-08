@@ -1,0 +1,26 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AWS Batch Debug" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="jbr-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <!-- AWS Configuration - Set these environment variables -->
+      <env name="AWS_DEFAULT_REGION" value="us-east-2" />
+      <env name="AWS_BATCH_QUEUE_ARN" value="arn:aws:batch:us-east-2:071867742034:job-queue/cromwell-test-managed-ec2" />
+      <env name="AWS_BATCH_SCRIPT_BUCKET" value="al-test-cloudfront-logs" />
+
+      <env name="AWS_PROFILE" value="cromwell-dev" />
+      <env name="AWS_SHARED_CREDENTIALS_FILE" value="/home/askldjd/.aws/tmp-credentials" />
+      <env name="AWS_CONFIG_FILE" value="/home/askldjd/.aws/config" />
+
+      <!-- Optional: Workflow logs directory -->
+      <env name="CROMWELL_WORKFLOW_LOGS_DIR" value="/tmp/cromwell-workflow-logs" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="cromwell.CromwellApp" />
+    <module name="root.cromwell" />
+    <option name="PROGRAM_PARAMETERS" value="server" />
+    <option name="VM_PARAMETERS" value="-Dconfig.file=aws_debug.conf -Xmx4g -Xms1g" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

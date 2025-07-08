@@ -16,7 +16,7 @@ object ContinuousIntegration {
       IO.copyDirectory(srcCiResources.value, targetCiResources.value)
     },
     renderCiResources := {
-      minnieKenny.toTask("").value
+//      minnieKenny.toTask("").value
       copyCiResources.value
       val log = streams.value.log
       if (!vaultToken.value.exists()) {
