@@ -1,0 +1,5 @@
+{
+  "CallCachingDemo.input_message": "Hello from call caching test!",
+  "CallCachingDemo.sleep_duration": 30,
+  "CallCachingDemo.output_prefix": "cached_demo"
+}
