@@ -1,0 +1,4 @@
+{
+  "S3LocalizationTest.input_file": "s3://al-test-cloudfront-logs/test-input.txt",
+  "S3LocalizationTest.output_prefix": "cromwell-test"
+}
