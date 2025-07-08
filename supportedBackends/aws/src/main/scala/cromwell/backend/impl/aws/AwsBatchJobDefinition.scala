@@ -135,11 +135,13 @@ trait AwsBatchJobDefinitionBuilder {
                   packedCommand: String,
                   volumes: List[Volume],
                   mountPoints: List[MountPoint],
-                  env: Seq[KeyValuePair]
+                  env: Seq[KeyValuePair],
+                  jobRoleArn: Option[String]
     ): String = {
+      val roleArnStr = jobRoleArn.getOrElse("")
       val str = s"$imageName:$packedCommand:${volumes.map(_.toString).mkString(",")}:${mountPoints
           .map(_.toString)
-          .mkString(",")}:${env.map(_.toString).mkString(",")}"
+          .mkString(",")}:${env.map(_.toString).mkString(",")}:$roleArnStr"
 
       val sha1 = MessageDigest
         .getInstance("SHA-1")
@@ -164,28 +166,37 @@ trait AwsBatchJobDefinitionBuilder {
       packedCommand.mkString(","),
       volumes,
       mountPoints,
-      environment
+      environment,
+      context.runtimeAttributes.jobRoleArn
     )
 
-    (builder
-       .command(packedCommand.asJava)
-       .resourceRequirements(
-         ResourceRequirement
-           .builder()
-           .`type`(ResourceType.MEMORY)
-           .value(context.runtimeAttributes.memory.to(MemoryUnit.MB).amount.toInt.toString)
-           .build(),
-         ResourceRequirement
-           .builder()
-           .`type`(ResourceType.VCPU)
-           .value(context.runtimeAttributes.cpu.value.toString)
-           .build()
-       )
-       .volumes(volumes.asJava)
-       .mountPoints(mountPoints.asJava)
-       .environment(environment.asJava),
-     jobDefinitionName
-    )
+    {
+      val builderWithBasicProperties = builder
+        .command(packedCommand.asJava)
+        .resourceRequirements(
+          ResourceRequirement
+            .builder()
+            .`type`(ResourceType.MEMORY)
+            .value(context.runtimeAttributes.memory.to(MemoryUnit.MB).amount.toInt.toString)
+            .build(),
+          ResourceRequirement
+            .builder()
+            .`type`(ResourceType.VCPU)
+            .value(context.runtimeAttributes.cpu.value.toString)
+            .build()
+        )
+        .volumes(volumes.asJava)
+        .mountPoints(mountPoints.asJava)
+        .environment(environment.asJava)
+      
+      // Add job role ARN if specified
+      val finalBuilder = context.runtimeAttributes.jobRoleArn match {
+        case Some(roleArn) => builderWithBasicProperties.jobRoleArn(roleArn)
+        case None => builderWithBasicProperties
+      }
+      
+      (finalBuilder, jobDefinitionName)
+    }
   }
 
   private def packCommand(shell: String, options: String, mainCommand: String): Seq[String] = {

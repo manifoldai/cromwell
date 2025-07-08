@@ -69,7 +69,9 @@ class AwsBatchRuntimeAttributesSpec extends AnyWordSpecLike with CromwellTimeout
     false,
     ContinueOnReturnCodeSet(Set(0)),
     false,
-    "my-stuff"
+    "my-stuff",
+    "s3",
+    None
   )
 
   val expectedDefaultsLocalFS = new AwsBatchRuntimeAttributes(
@@ -83,7 +85,8 @@ class AwsBatchRuntimeAttributesSpec extends AnyWordSpecLike with CromwellTimeout
     ContinueOnReturnCodeSet(Set(0)),
     false,
     "",
-    "local"
+    "local",
+    None
   )
 
   "AwsBatchRuntimeAttributes" should {
@@ -410,6 +413,64 @@ class AwsBatchRuntimeAttributesSpec extends AnyWordSpecLike with CromwellTimeout
         val runtimeAttributes = Map("docker" -> WomString("ubuntu:latest"), "queueArn" -> WomString(invalidArn))
         assertAwsBatchRuntimeAttributesFailedCreation(runtimeAttributes, "ARN has invalid format")
       }
+    }
+
+    "validate a valid jobRoleArn entry" in {
+      val validJobRoleArns = List(
+        "arn:aws:iam::123456789012:role/BatchJobRole",
+        "arn:aws:iam::123456789012:role/my-batch-job-role",
+        "arn:aws:iam::123456789012:role/service-role/AWSBatchServiceRole",
+        "arn:aws:iam::123456789012:role/BatchJobRole-with-123",
+        "arn:aws:iam::123456789012:role/BatchJobRole_with_underscores",
+        "arn:aws:iam::123456789012:role/BatchJobRole.with.dots",
+        "arn:aws:iam::123456789012:role/BatchJobRole+with+plus",
+        "arn:aws:iam::123456789012:role/BatchJobRole=with=equals",
+        "arn:aws:iam::123456789012:role/BatchJobRole,with,commas",
+        "arn:aws:iam::123456789012:role/BatchJobRole@with@at",
+        "arn:aws-cn:iam::123456789012:role/BatchJobRole",
+        "arn:aws-us-gov:iam::123456789012:role/BatchJobRole"
+      )
+      validJobRoleArns foreach { validArn =>
+        val runtimeAttributes = Map(
+          "docker" -> WomString("ubuntu:latest"),
+          "scriptBucketName" -> WomString("my-stuff"),
+          "jobRoleArn" -> WomString(validArn)
+        )
+        val expectedRuntimeAttributes = expectedDefaults.copy(jobRoleArn = Some(validArn))
+        assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
+      }
+    }
+
+    "fail to validate an invalid jobRoleArn entry" in {
+      val invalidJobRoleArns = List(
+        "arn:aws:batch:us-east-1:123456789012:job-queue/invalid", // Wrong service
+        "arn:aws:iam::123456789012:user/NotARole", // Wrong resource type
+        "arn:aws:iam::123456789012:policy/NotARole", // Wrong resource type
+        "arn:aws:iam::123456789012:group/NotARole", // Wrong resource type
+        "arn:aws:iam::123456789012:role/", // Empty role name
+        "arn:aws:iam:us-east-1:123456789012:role/HasRegion", // IAM roles have no region
+        "arn:aws:iam::123456789012:role/RoleNameLongerThan64Chars_65CharsActually_LoremIpsumDolor", // Too long
+        "arn:aws:iam:::role/NoAccount", // Missing account
+        "arn:aws:iam::123456789012:role/Role With Spaces", // Spaces not allowed
+        "arn:aws:iam::123456789012:role/Role#With#Hash", // Hash not allowed
+        "arn:aws:iam::123456789012:role/Role%With%Percent" // Percent not allowed
+      )
+      invalidJobRoleArns foreach { invalidArn =>
+        val runtimeAttributes = Map(
+          "docker" -> WomString("ubuntu:latest"),
+          "jobRoleArn" -> WomString(invalidArn)
+        )
+        assertAwsBatchRuntimeAttributesFailedCreation(runtimeAttributes, "ARN has invalid format")
+      }
+    }
+
+    "allow optional jobRoleArn" in {
+      val runtimeAttributes = Map(
+        "docker" -> WomString("ubuntu:latest"),
+        "scriptBucketName" -> WomString("my-stuff")
+      )
+      val expectedRuntimeAttributes = expectedDefaults.copy(jobRoleArn = None)
+      assertAwsBatchRuntimeAttributesSuccessfulCreation(runtimeAttributes, expectedRuntimeAttributes)
     }
 
     "override config default attributes with default attributes declared in workflow options" in {
