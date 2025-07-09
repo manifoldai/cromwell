@@ -19,12 +19,26 @@ curl -X POST "http://localhost:8000/api/workflows/v1" \
   false, "read_from_cache": false}'
 ```
 
+## Hello World with labels
+```bash
+curl -X POST "http://localhost:8000/api/workflows/v1" \
+  -H "accept: application/json" \
+  -F "workflowSource=@hello_world.wdl" \
+  -F "workflowInputs={}" \
+  -F labels='{"user": "aning@manifold.ai", "team": "engineering"}'
+```
+
 ## Localization Test WDL
 ```bash
 curl -X POST "http://localhost:8000/api/workflows/v1" \
     -H "accept: application/json" \
     -F "workflowSource=@s3_localization_test.wdl" \
-    -F "workflowInputs=@test_inputs.json"
+    -F "workflowInputs=@s3_test_inputs.json"
+    
+curl -X POST "http://localhost:8000/api/workflows/v1" \
+    -H "accept: application/json" \
+    -F "workflowSource=@gcs_localization_test.wdl" \
+    -F "workflowInputs=@gcs_test_inputs.json"
 ```
 
 ## Call Caching Test WDL

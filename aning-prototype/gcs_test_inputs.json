@@ -1,0 +1,4 @@
+{
+  "GCSLocalizationTest.input_file": "gs://gcp-public-data-landsat/LC08/01/001/003/LC08_L1GT_001003_20161004_20170320_01_T2/LC08_L1GT_001003_20161004_20170320_01_T2_MTL.txt",
+  "GCSLocalizationTest.output_prefix": "cromwell-test"
+}
