@@ -60,7 +60,6 @@ import scala.util.matching.Regex
  * @param noAddress is there no address
  * @param scriptS3BucketName the s3 bucket where the execution command or script will be written and, from there, fetched into the container and executed
  * @param fileSystem the filesystem type, default is "s3"
- * @param jobRoleArn the IAM role ARN that the job should assume when executing
  */
 case class AwsBatchRuntimeAttributes(cpu: Int Refined Positive,
                                      zones: Vector[String],
@@ -72,15 +71,12 @@ case class AwsBatchRuntimeAttributes(cpu: Int Refined Positive,
                                      continueOnReturnCode: ContinueOnReturnCode,
                                      noAddress: Boolean,
                                      scriptS3BucketName: String,
-                                     fileSystem: String = "s3",
-                                     jobRoleArn: Option[String] = None
+                                     fileSystem: String = "s3"
 )
 
 object AwsBatchRuntimeAttributes {
 
   val QueueArnKey = "queueArn"
-
-  val JobRoleArnKey = "jobRoleArn"
 
   val scriptS3BucketKey = "scriptBucketName"
 
@@ -139,8 +135,6 @@ object AwsBatchRuntimeAttributes {
         (throw new RuntimeException("queueArn is required"))
     )
 
-  private def jobRoleArnValidation(runtimeConfig: Option[Config]): OptionalRuntimeAttributesValidation[String] =
-    JobRoleArnValidation.optional
 
   def runtimeAttributesBuilder(configuration: AwsBatchConfiguration): StandardValidatedRuntimeAttributesBuilder = {
     val runtimeConfig = configuration.runtimeConfig
@@ -154,8 +148,7 @@ object AwsBatchRuntimeAttributes {
         noAddressValidation(runtimeConfig),
         dockerValidation,
         queueArnValidation(runtimeConfig),
-        scriptS3BucketNameValidation(runtimeConfig),
-        jobRoleArnValidation(runtimeConfig)
+        scriptS3BucketNameValidation(runtimeConfig)
       )
     def validationsLocalBackend = StandardValidatedRuntimeAttributesBuilder
       .default(runtimeConfig)
@@ -166,8 +159,7 @@ object AwsBatchRuntimeAttributes {
         memoryValidation(runtimeConfig),
         noAddressValidation(runtimeConfig),
         dockerValidation,
-        queueArnValidation(runtimeConfig),
-        jobRoleArnValidation(runtimeConfig)
+        queueArnValidation(runtimeConfig)
       )
 
     configuration.fileSystem match {
@@ -206,8 +198,6 @@ object AwsBatchRuntimeAttributes {
         )
       case _ => ""
     }
-    val jobRoleArn: Option[String] =
-      RuntimeAttributesValidation.extractOption(jobRoleArnValidation(runtimeAttrsConfig).key, validatedRuntimeAttributes)
 
     new AwsBatchRuntimeAttributes(
       cpu,
@@ -220,8 +210,7 @@ object AwsBatchRuntimeAttributes {
       continueOnReturnCode,
       noAddress,
       scriptS3BucketName,
-      fileSystem,
-      jobRoleArn
+      fileSystem
     )
   }
 }
@@ -279,32 +268,6 @@ object QueueArnValidation extends ArnValidation(AwsBatchRuntimeAttributes.QueueA
     """.trim.r
 }
 
-object JobRoleArnValidation extends ArnValidation(AwsBatchRuntimeAttributes.JobRoleArnKey) {
-  // IAM role arn format can be found here
-  // https://docs.aws.amazon.com/en_us/general/latest/gr/aws-arns-and-namespaces.html#arn-syntax-iam
-  // arn:aws:iam::account-id:role/role-name
-  override protected val arnRegex: Regex =
-    s"""
-      (?x)                            # Turn on comments and whitespace insensitivity
-      (arn)                           # Every AWS ARN starts with "arn"
-      :
-      (                               # Begin capturing ARN for partition
-        aws                           # Required part of a partition
-        (-[a-z]+){0,2}                # Optional part like "-cn" or "-us-gov". Therefore, the whole partition may look like "aws", "aws-cn", "aws-us-gov"
-      )                               # End capturing ARN for partition
-      :
-      (iam)                           # IAM service
-      :
-      :                               # IAM has no region component (empty)
-      (\\d{12})                       # Account ID. The AWS account ID is a 12-digit number.
-      :
-      (                               # Begin capturing ARN for "resourcetype/resource"
-        (role)                        # Resource type of IAM role
-        /                             # Separator between resource type and resource name
-        ([\\w+=,.@-]{1,64})           # Resource name of IAM role can contain alphanumeric characters and +=,.@- characters, up to 64 characters long
-      )                               # End capturing ARN for "resourcetype/resource"
-    """.trim.r
-}
 
 object ArnValidation {
   def apply(key: String): ArnValidation = new ArnValidation(key)

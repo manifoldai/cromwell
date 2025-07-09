@@ -34,6 +34,7 @@ package cromwell.backend.impl.aws
 import scala.collection.mutable.ListBuffer
 import cromwell.backend.BackendJobDescriptor
 import cromwell.backend.io.JobPaths
+import cromwell.core.WorkflowOptions
 import software.amazon.awssdk.services.batch.model.{
   ContainerProperties,
   Host,
@@ -50,6 +51,7 @@ import java.security.MessageDigest
 import org.apache.commons.lang3.builder.{ToStringBuilder, ToStringStyle}
 import org.slf4j.{Logger, LoggerFactory}
 import wdl4s.parser.MemoryUnit
+import scala.util.Success
 
 /**
   * Responsible for the creation of the job definition.
@@ -136,9 +138,12 @@ trait AwsBatchJobDefinitionBuilder {
                   volumes: List[Volume],
                   mountPoints: List[MountPoint],
                   env: Seq[KeyValuePair],
-                  jobRoleArn: Option[String]
+                  workflowOptions: WorkflowOptions
     ): String = {
-      val roleArnStr = jobRoleArn.getOrElse("")
+      val roleArnStr = workflowOptions.get(AwsBatchWorkflowOptionKeys.JobRoleArn) match {
+        case Success(roleArn) => roleArn
+        case _ => ""
+      }
       val str = s"$imageName:$packedCommand:${volumes.map(_.toString).mkString(",")}:${mountPoints
           .map(_.toString)
           .mkString(",")}:${env.map(_.toString).mkString(",")}:$roleArnStr"
@@ -167,7 +172,7 @@ trait AwsBatchJobDefinitionBuilder {
       volumes,
       mountPoints,
       environment,
-      context.runtimeAttributes.jobRoleArn
+      context.workflowOptions
     )
 
     {
@@ -190,9 +195,9 @@ trait AwsBatchJobDefinitionBuilder {
         .environment(environment.asJava)
       
       // Add job role ARN if specified
-      val finalBuilder = context.runtimeAttributes.jobRoleArn match {
-        case Some(roleArn) => builderWithBasicProperties.jobRoleArn(roleArn)
-        case None => builderWithBasicProperties
+      val finalBuilder = context.workflowOptions.get(AwsBatchWorkflowOptionKeys.JobRoleArn) match {
+        case Success(roleArn) => builderWithBasicProperties.jobRoleArn(roleArn)
+        case _ => builderWithBasicProperties
       }
       
       (finalBuilder, jobDefinitionName)
@@ -240,7 +245,8 @@ case class AwsBatchJobDefinitionContext(runtimeAttributes: AwsBatchRuntimeAttrib
                                         jobDescriptor: BackendJobDescriptor,
                                         jobPaths: JobPaths,
                                         inputs: Set[AwsBatchInput],
-                                        outputs: Set[AwsBatchFileOutput]
+                                        outputs: Set[AwsBatchFileOutput],
+                                        workflowOptions: WorkflowOptions
 ) {
 
   override def toString: String =
@@ -254,5 +260,6 @@ case class AwsBatchJobDefinitionContext(runtimeAttributes: AwsBatchRuntimeAttrib
       .append("jobPaths", jobPaths)
       .append("inputs", inputs)
       .append("outputs", outputs)
+      .append("workflowOptions", workflowOptions)
       .build
 }

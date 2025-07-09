@@ -20,7 +20,7 @@ task SayHello {
   command <<<
     echo "Hello, ${name}!"
   >>>
-  
+
   output {
     String message = stdout()
   }
@@ -29,6 +29,5 @@ task SayHello {
     docker: "ubuntu:20.04"
     memory: "1 GB"
     cpu: 1
-    jobRoleArn: "arn:aws:iam::071867742034:role/stage-usr-aning@manifold.ai"
   }
 }
