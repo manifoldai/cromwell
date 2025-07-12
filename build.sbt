@@ -1,5 +1,8 @@
 import Dependencies._
 import Settings._
+import Publishing._
+import sbtdocker.Instructions
+import sbtdocker.staging.CopyFile
 
 // Libraries
 
@@ -380,7 +383,12 @@ lazy val pact4s = project.in(file("pact4s"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
 
 lazy val server = project
-  .withExecutableSettings("cromwell", serverDependencies)
+  .withExecutableSettings("cromwell", serverDependencies, customSettings = List(
+    dockerCustomSettings := List(
+      Instructions.Run("mkdir -p /app/config"),
+      Instructions.Add(CopyFile(file("aning-prototype/aws_ecs_mysql.conf")), "/app/config/cromwell.conf")
+    )
+  ))
   .dependsOn(engine)
   .dependsOn(googlePipelinesV2Beta)
   .dependsOn(googleBatch)
